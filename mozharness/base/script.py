@@ -507,6 +507,10 @@ class ScriptMixin(object):
             if is_exe(program):
                 return program
         else:
+            exe = self.config.get('exes', {}).get(program)
+            if exe:
+                return exe
+
             env = self.query_env()
             for path in env["PATH"].split(os.pathsep):
                 exe_file = os.path.join(path, program)

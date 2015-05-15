@@ -115,6 +115,7 @@ class VCSScript(VCSMixin, BaseScript):
     def __init__(self, **kwargs):
         super(VCSScript, self).__init__(**kwargs)
 
+
     def pull(self, repos=None, parent_dir=None):
         repos = repos or self.config.get('repos')
         if not repos:
