@@ -99,6 +99,8 @@ class VirtualenvMixin(object):
             else:
                 virtualenv = os.path.join(dirs['abs_work_dir'],
                                           c['virtualenv_path'])
+        else:
+            virtualenv = os.path.join(dirs['abs_work_dir'], 'venv')
         return virtualenv
 
     def query_python_path(self, binary="python"):

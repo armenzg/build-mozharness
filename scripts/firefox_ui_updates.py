@@ -14,6 +14,7 @@ import os
 # load modules from parent dir
 sys.path.insert(1, os.path.dirname(sys.path[0]))
 
+from mozharness.base.log import INFO
 from mozharness.base.script import PreScriptAction
 from mozharness.mozilla.testing.firefox_ui_tests import FirefoxUITests
 
@@ -152,6 +153,11 @@ class FirefoxUIUpdates(FirefoxUITests):
             exit(1)
 
     def run_tests(self):
+        # XXX: We need to fix this. If linux
+        env = {
+            'DISPLAY': ':2',
+        }
+        env = self.query_env(partial_env=env, log_level=INFO)
         dirs = self.query_abs_dirs()
         bin_dir = os.path.dirname(self.query_python_path())
         fx_ui_tests_bin = os.path.join(bin_dir, 'firefox-ui-update')
@@ -165,7 +171,7 @@ class FirefoxUIUpdates(FirefoxUITests):
                     release['from'].replace('%locale%', locale)
                 )
 
-                file_path = self.download_file(
+                installer_path = self.download_file(
                     url=url,
                     parent_dir=dirs['abs_work_dir']
                 )
@@ -173,31 +179,31 @@ class FirefoxUIUpdates(FirefoxUITests):
                 # Build the command
                 cmd = [
                     fx_ui_tests_bin,
-                    '--installer', file_path,
+                    '--installer', installer_path,
                     '--update-channel', release['channel'],
                     '--log-unittest=harness.log',
                     '--gecko-log=gecko.log',
                 ]
 
-                return_code = self.run_command(cmd, cwd=dirs['abs_work_dir'], output_timeout=100)
+                return_code = self.run_command(cmd, cwd=dirs['abs_work_dir'],
+                                               output_timeout=100,
+                                               env=env)
 
                 self.info('== Dumping output of harness ==')
-                with open(harness_log, 'r') as f:
-                    contents = f.readlines()
-                    self.warning(contents)
+                contents = self.read_from_file(harness_log, verbose=False)
+                self.info(contents)
                 self.info('== End of harness output ==')
 
                 # Return more output if we fail
                 if return_code != 0:
                     self.warning('FAIL: firefox-ui-update has failed for')
                     self.warning('== Dumping gecko output ==')
-                    with open('gecko.txt', 'r') as f:
-                        contents = f.readlines()
-                        self.warning(contents)
+                    contents = self.read_from_file('gecko.txt', verbose=False)
+                    self.warning(contents)
                     self.warning('== End of gecko output ==')
 
-                self.rm(file_path)
-                self.rm(harness_log)
+                os.remove(installer_path)
+                os.remove(harness_log)
 
 
 if __name__ == '__main__':
