@@ -28,21 +28,23 @@ class FirefoxUITests(VCSToolsScript, VirtualenvMixin):
     ]
 
     def __init__(self, config=[], config_options=[], all_actions=[]):
-        print config_options
-        print self.config_options
         self.config_options += config_options
-        print self.config_options
 
-        super(FirefoxUITests, self).__init__(
-            config_options=self.config_options,
-            config=config,
-            all_actions=list(set([
+        if all_actions is None:
+            # Default actions
+            all_actions = [
                 'clobber',
                 'checkout',
                 'create-virtualenv',
                 'run-tests',
-            ] + all_actions)),
+            ]
+
+        super(FirefoxUITests, self).__init__(
+            config_options=self.config_options,
+            config=config,
+            all_actions=all_actions,
         )
+
         self.firefox_ui_branch = self.config['firefox_ui_branch']
 
     def query_abs_dirs(self):

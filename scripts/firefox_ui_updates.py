@@ -57,6 +57,9 @@ class FirefoxUIUpdates(FirefoxUITests):
             self.config['update_config_file']
         )
 
+        self.tools_repo = self.config.get('tools_repo',
+                                          'http://hg.mozilla.org/build/tools')
+
 
     def query_abs_dirs(self):
         if self.abs_dirs:
@@ -83,7 +86,7 @@ class FirefoxUIUpdates(FirefoxUITests):
         dirs = self.query_abs_dirs()
 
         self.vcs_checkout(
-            repo='http://hg.mozilla.org/build/tools',
+            repo=self.tools_repo,
             dest=dirs['tools_dir'],
             revision='default',
             vcs='hgtool'
