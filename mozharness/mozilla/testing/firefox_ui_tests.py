@@ -23,6 +23,7 @@ class FirefoxUITests(VCSToolsScript, VirtualenvMixin):
         }],
         [['--firefox-ui-branch'], {
             'dest': 'firefox_ui_branch',
+            'default': 'master',
             'help': 'which branch to use for firefox_ui_tests',
         }],
     ]

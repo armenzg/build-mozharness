@@ -38,6 +38,15 @@ class FirefoxUIUpdates(FirefoxUITests):
                 'dest': 'update_config_file',
                 'help': 'which revision/tag to use for firefox_ui_tests',
             }],
+            # The following options can only be used with --installer-path
+            [['--installer-url'], {
+                'dest': 'installer_url',
+                'help': 'Point to an installer to download and test against.',
+            }],
+            [['--update-channel'], {
+                'dest': 'update_channel',
+                'help': 'Update channel to use',
+            }],
         ]
 
         super(FirefoxUIUpdates, self).__init__(
@@ -46,20 +55,33 @@ class FirefoxUIUpdates(FirefoxUITests):
                 'clobber',
                 'checkout',
                 'create-virtualenv',
-                'read-configuration-file',
+                'determine-testing-configuration',
                 'run-tests',
             ],
         )
 
         dirs = self.query_abs_dirs()
 
-        self.updates_config_file = os.path.join(
-            dirs['tools_dir'], 'release', 'updates',
-            self.config['update_config_file']
-        )
+        assert 'update_config_file' in self.config or \
+            'installer_url' in self.config, \
+            'Either specify --update-config-file or --installer-url.'
+
+        if self.config.get('update_config_file'):
+            self.updates_config_file = os.path.join(
+                dirs['tools_dir'], 'release', 'updates',
+                self.config['update_config_file']
+            )
 
         self.tools_repo = self.config.get('tools_repo',
                                           'http://hg.mozilla.org/build/tools')
+        self.installer_url = self.config.get('installer_url')
+
+        if self.installer_url and not self.config.get('update_channel'):
+            self.critical("You need to set --update-channel when you "
+                          "use --installer-url.")
+            exit(1)
+        else:
+            self.update_channel = self.config['update_channel']
 
 
     def query_abs_dirs(self):
@@ -94,8 +116,12 @@ class FirefoxUIUpdates(FirefoxUITests):
         )
 
 
-    def read_configuration_file(self):
+    def determine_testing_configuration(self):
         '''
+        This method builds a testing matrix either based on:
+           * Specified --installer-url
+           * Update verification configuration file
+
         Each line of the releng configuration files look like this:
             NOTE: I'm showing each pair of information as a new line but in reality
             there is one white space separting them.
@@ -116,9 +142,15 @@ class FirefoxUIUpdates(FirefoxUITests):
         We will store this information in self.releases as a list of dict per release.
         '''
         self.releases = []
+
+        if self.installer_url:
+            # We're only testing one build
+            return
+
         lines = []
-        with open(self.updates_config_file, 'r') as f:
-            lines = f.readlines()
+        lines = self.read_from_file(self.update_config_file, verbose=False)
+        #with open(self.updates_config_file, 'r') as f:
+        #    lines = f.readlines()
 
         for line in lines:
             release_info = {}
@@ -147,12 +179,16 @@ class FirefoxUIUpdates(FirefoxUITests):
 
     @PreScriptAction('run-tests')
     def _pre_run_tests(self, action):
-        if self.releases is None:
+        if self.releases is None and not self.installer_url:
             # XXX: re-evaluate this idea
             self.critical('You need to set the list of releases')
             exit(1)
 
-    def run_tests(self):
+
+    def _run_test(self, installer_path, update_channel):
+        '''
+        All required steps for running the tests against an installer.
+        '''
         # XXX: We need to fix this. If linux
         env = {
             'DISPLAY': ':2',
@@ -162,48 +198,59 @@ class FirefoxUIUpdates(FirefoxUITests):
         bin_dir = os.path.dirname(self.query_python_path())
         fx_ui_tests_bin = os.path.join(bin_dir, 'firefox-ui-update')
         harness_log=os.path.join(dirs['abs_work_dir'], 'harness.log')
+        # Build the command
+        cmd = [
+            fx_ui_tests_bin,
+            '--installer', installer_path,
+            '--update-channel', update_channel,
+            '--log-unittest=harness.log',
+            '--gecko-log=gecko.log',
+        ]
 
-        for release in self.releases:
-            for locale in release['locales']:
-                # Determine from where to download the file
-                url = '%s/%s' % (
-                    release['ftp_server_from'],
-                    release['from'].replace('%locale%', locale)
-                )
+        return_code = self.run_command(cmd, cwd=dirs['abs_work_dir'],
+                                       output_timeout=100,
+                                       env=env)
 
-                installer_path = self.download_file(
-                    url=url,
-                    parent_dir=dirs['abs_work_dir']
-                )
+        self.info('== Dumping output of harness ==')
+        contents = self.read_from_file(harness_log, verbose=False)
+        self.info(contents)
+        self.info('== End of harness output ==')
 
-                # Build the command
-                cmd = [
-                    fx_ui_tests_bin,
-                    '--installer', installer_path,
-                    '--update-channel', release['channel'],
-                    '--log-unittest=harness.log',
-                    '--gecko-log=gecko.log',
-                ]
+        # Return more output if we fail
+        if return_code != 0:
+            self.warning('FAIL: firefox-ui-update has failed for')
+            self.warning('== Dumping gecko output ==')
+            contents = self.read_from_file('gecko.txt', verbose=False)
+            self.warning(contents)
+            self.warning('== End of gecko output ==')
 
-                return_code = self.run_command(cmd, cwd=dirs['abs_work_dir'],
-                                               output_timeout=100,
-                                               env=env)
+        os.remove(installer_path)
+        os.remove(harness_log)
 
-                self.info('== Dumping output of harness ==')
-                contents = self.read_from_file(harness_log, verbose=False)
-                self.info(contents)
-                self.info('== End of harness output ==')
+    def run_tests(self):
+        dirs = self.query_abs_dirs()
 
-                # Return more output if we fail
-                if return_code != 0:
-                    self.warning('FAIL: firefox-ui-update has failed for')
-                    self.warning('== Dumping gecko output ==')
-                    contents = self.read_from_file('gecko.txt', verbose=False)
-                    self.warning(contents)
-                    self.warning('== End of gecko output ==')
+        if self.installer_url:
+            installer_path = self.download_file(
+                self.installer_url,
+                parent_dir=dirs['abs_work_dir']
+            )
+            self._run_test(installer_path, self.update_channel)
+        else:
+            for release in self.releases:
+                for locale in release['locales']:
+                    # Determine from where to download the file
+                    url = '%s/%s' % (
+                        release['ftp_server_from'],
+                        release['from'].replace('%locale%', locale)
+                    )
 
-                os.remove(installer_path)
-                os.remove(harness_log)
+                    installer_path = self.download_file(
+                        url=url,
+                        parent_dir=dirs['abs_work_dir']
+                    )
+
+                    self._run_test(installer_path, release['channel'])
 
 
 if __name__ == '__main__':
