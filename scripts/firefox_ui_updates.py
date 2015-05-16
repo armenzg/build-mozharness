@@ -43,10 +43,6 @@ class FirefoxUIUpdates(FirefoxUITests):
                 'dest': 'installer_url',
                 'help': 'Point to an installer to download and test against.',
             }],
-            [['--update-channel'], {
-                'dest': 'update_channel',
-                'help': 'Update channel to use',
-            }],
         ]
 
         super(FirefoxUIUpdates, self).__init__(
@@ -75,13 +71,6 @@ class FirefoxUIUpdates(FirefoxUITests):
         self.tools_repo = self.config.get('tools_repo',
                                           'http://hg.mozilla.org/build/tools')
         self.installer_url = self.config.get('installer_url')
-
-        if self.installer_url and not self.config.get('update_channel'):
-            self.critical("You need to set --update-channel when you "
-                          "use --installer-url.")
-            exit(1)
-        else:
-            self.update_channel = self.config['update_channel']
 
 
     def query_abs_dirs(self):
@@ -149,8 +138,6 @@ class FirefoxUIUpdates(FirefoxUITests):
 
         lines = []
         lines = self.read_from_file(self.update_config_file, verbose=False)
-        #with open(self.updates_config_file, 'r') as f:
-        #    lines = f.readlines()
 
         for line in lines:
             release_info = {}
@@ -185,7 +172,7 @@ class FirefoxUIUpdates(FirefoxUITests):
             exit(1)
 
 
-    def _run_test(self, installer_path, update_channel):
+    def _run_test(self, installer_path, update_channel=None):
         '''
         All required steps for running the tests against an installer.
         '''
@@ -202,10 +189,12 @@ class FirefoxUIUpdates(FirefoxUITests):
         cmd = [
             fx_ui_tests_bin,
             '--installer', installer_path,
-            '--update-channel', update_channel,
             '--log-unittest=harness.log',
             '--gecko-log=gecko.log',
         ]
+
+        if update_channel:
+            cmd += ['--update-channel', update_channel]
 
         return_code = self.run_command(cmd, cwd=dirs['abs_work_dir'],
                                        output_timeout=100,
@@ -235,7 +224,7 @@ class FirefoxUIUpdates(FirefoxUITests):
                 self.installer_url,
                 parent_dir=dirs['abs_work_dir']
             )
-            self._run_test(installer_path, self.update_channel)
+            self._run_test(installer_path)
         else:
             for release in self.releases:
                 for locale in release['locales']:
