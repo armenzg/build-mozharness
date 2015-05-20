@@ -8,8 +8,9 @@
 
 Author: Armen Zambrano G.
 """
-import sys
+import copy
 import os
+import sys
 
 # load modules from parent dir
 sys.path.insert(1, os.path.dirname(sys.path[0]))
@@ -23,6 +24,23 @@ class FirefoxUIUpdates(FirefoxUITests):
     # This will be a list containing one item per release based on configs
     # from tools/release/updates/*cfg
     releases = None
+    harness_extra_args = [
+        [['--update-allow-mar-channel'], {
+            'dest': 'update_allow_mar_channel',
+            'help': 'Additional MAR channel to be allowed for updates, e.g. '
+                    '"firefox-mozilla-beta" for updating a release build to '
+                    'the latest beta build.',
+        }],
+        [['--update-target-version'], {
+            'dest': 'update_target_version',
+            'help': 'Version of the updated build.',
+        }],
+        [['--update-target-buildid'], {
+            'dest': 'update_target_buildid',
+            'help': 'Build ID of the updated build',
+        }],
+    ]
+
 
     def __init__(self):
         config_options = [
@@ -38,12 +56,16 @@ class FirefoxUIUpdates(FirefoxUITests):
                 'dest': 'update_config_file',
                 'help': 'which revision/tag to use for firefox_ui_tests',
             }],
-            # The following options can only be used with --installer-path
+            # These are options when we don't use the releng update config file
             [['--installer-url'], {
                 'dest': 'installer_url',
                 'help': 'Point to an installer to download and test against.',
             }],
-        ]
+            [['--installer-path'], {
+                'dest': 'installer_path',
+                'help': 'Point to an installer to test against.',
+            }],
+        ] + copy.deepcopy(self.harness_extra_args)
 
         super(FirefoxUIUpdates, self).__init__(
             config_options=config_options,
@@ -59,8 +81,9 @@ class FirefoxUIUpdates(FirefoxUITests):
         dirs = self.query_abs_dirs()
 
         assert 'update_config_file' in self.config or \
-            'installer_url' in self.config, \
-            'Either specify --update-config-file or --installer-url.'
+            'installer_url' in self.config or \
+            'installer_path' in self.config, \
+            'Either specify --update-config-file, --installer-url or --installer-path.'
 
         if self.config.get('update_config_file'):
             self.updates_config_file = os.path.join(
@@ -71,6 +94,11 @@ class FirefoxUIUpdates(FirefoxUITests):
         self.tools_repo = self.config.get('tools_repo',
                                           'http://hg.mozilla.org/build/tools')
         self.installer_url = self.config.get('installer_url')
+        self.installer_path = self.config.get('installer_path')
+        if self.installer_path:
+            if not os.path.exists(self.installer_path):
+                self.critical("Please make sure that the path to the installer exists.")
+                exit(1)
 
 
     def query_abs_dirs(self):
@@ -132,7 +160,7 @@ class FirefoxUIUpdates(FirefoxUITests):
         '''
         self.releases = []
 
-        if self.installer_url:
+        if self.installer_url or self.installer_path:
             # We're only testing one build
             return
 
@@ -166,7 +194,7 @@ class FirefoxUIUpdates(FirefoxUITests):
 
     @PreScriptAction('run-tests')
     def _pre_run_tests(self, action):
-        if self.releases is None and not self.installer_url:
+        if self.releases is None and (not self.installer_url and not self.installer_path):
             # XXX: re-evaluate this idea
             self.critical('You need to set the list of releases')
             exit(1)
@@ -192,6 +220,11 @@ class FirefoxUIUpdates(FirefoxUITests):
             '--log-unittest=harness.log',
             '--gecko-log=gecko.log',
         ]
+
+        for arg in self.harness_extra_args:
+            dest = arg[1]['dest']
+            if dest in self.config:
+                cmd += [' '.join(arg[0]), self.config[dest]]
 
         if update_channel:
             cmd += ['--update-channel', update_channel]
@@ -220,11 +253,13 @@ class FirefoxUIUpdates(FirefoxUITests):
         dirs = self.query_abs_dirs()
 
         if self.installer_url:
-            installer_path = self.download_file(
+            self.installer_path = self.download_file(
                 self.installer_url,
                 parent_dir=dirs['abs_work_dir']
             )
-            self._run_test(installer_path)
+
+        if self.installer_path:
+            self._run_test(self.installer_path)
         else:
             for release in self.releases:
                 for locale in release['locales']:
