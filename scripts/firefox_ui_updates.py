@@ -158,16 +158,16 @@ class FirefoxUIUpdates(FirefoxUITests):
 
         We will store this information in self.releases as a list of dict per release.
         '''
-        self.releases = []
+        self.releases = {}
 
         if self.installer_url or self.installer_path:
             # We're only testing one build
             return
 
-        lines = []
-        lines = self.read_from_file(self.update_config_file, verbose=False)
+        content = []
+        content = self.read_from_file(self.updates_config_file, verbose=False)
 
-        for line in lines:
+        for line in content.splitlines():
             release_info = {}
             # The left double quote is handled here
             blocks = line.split('" ')
@@ -187,16 +187,18 @@ class FirefoxUIUpdates(FirefoxUITests):
                     # Store value
                     release_info[key] = value
 
-            if release_info is not None:
+            if release_info is not None \
+                    and 'ftp_server_from' in release_info \
+                    and release_info['build_id'] not in self.releases:
                 self.debug('Read information about %s %s' % \
                           (release_info['build_id'], release_info['release']))
-                self.releases.append(release_info)
+                self.releases[release_info['build_id']] = release_info
 
     @PreScriptAction('run-tests')
     def _pre_run_tests(self, action):
         if self.releases is None and (not self.installer_url and not self.installer_path):
             # XXX: re-evaluate this idea
-            self.critical('You need to set the list of releases')
+            self.critical('You need to call --determine-testing-configuration as well.')
             exit(1)
 
 
@@ -229,6 +231,7 @@ class FirefoxUIUpdates(FirefoxUITests):
         if update_channel:
             cmd += ['--update-channel', update_channel]
 
+        '''
         return_code = self.run_command(cmd, cwd=dirs['abs_work_dir'],
                                        output_timeout=100,
                                        env=env)
@@ -248,6 +251,7 @@ class FirefoxUIUpdates(FirefoxUITests):
 
         os.remove(installer_path)
         os.remove(harness_log)
+        '''
 
     def run_tests(self):
         dirs = self.query_abs_dirs()
@@ -261,7 +265,8 @@ class FirefoxUIUpdates(FirefoxUITests):
         if self.installer_path:
             self._run_test(self.installer_path)
         else:
-            for release in self.releases:
+            for release in self.releases.values():
+                print '%s %s' % (release['build_id'], ' '.join(release['locales']))
                 for locale in release['locales']:
                     # Determine from where to download the file
                     url = '%s/%s' % (
@@ -269,12 +274,14 @@ class FirefoxUIUpdates(FirefoxUITests):
                         release['from'].replace('%locale%', locale)
                     )
 
+                    '''
                     installer_path = self.download_file(
                         url=url,
                         parent_dir=dirs['abs_work_dir']
                     )
 
                     self._run_test(installer_path, release['channel'])
+                    '''
 
 
 if __name__ == '__main__':
