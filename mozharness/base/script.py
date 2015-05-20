@@ -507,10 +507,12 @@ class ScriptMixin(object):
             if is_exe(program):
                 return program
         else:
+            # If the exe file is defined in the configs let's use that
             exe = self.config.get('exes', {}).get(program)
             if exe:
                 return exe
 
+            # If not defined, let's look for it in the $PATH
             env = self.query_env()
             for path in env["PATH"].split(os.pathsep):
                 exe_file = os.path.join(path, program)
