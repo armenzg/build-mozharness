@@ -46,15 +46,26 @@ class FirefoxUIUpdates(FirefoxUITests):
         config_options = [
             [['--tools-repo'], {
                 'dest': 'tools_repo',
+                'default': 'http://hg.mozilla.org/build/tools',
                 'help': 'which tools repo to check out',
             }],
             [['--tools-revision'], {
                 'dest': 'tools_revision',
                 'help': 'which revision/tag to use for tools',
             }],
-            [['--update-config-file'], {
-                'dest': 'update_config_file',
+            [['--update-verify-config'], {
+                'dest': 'update_verify_config',
                 'help': 'which revision/tag to use for firefox_ui_tests',
+            }],
+            [['--this-chunk'], {
+                'dest': 'this_chunk',
+                'default': 1,
+                'help': 'What chunk of locales to process.',
+            }],
+            [['--total-chunks'], {
+                'dest': 'total_chunks',
+                'default': 1,
+                'help': 'Total chunks to dive the locales into.',
             }],
             # These are options when we don't use the releng update config file
             [['--installer-url'], {
@@ -80,15 +91,20 @@ class FirefoxUIUpdates(FirefoxUITests):
 
         dirs = self.query_abs_dirs()
 
-        assert 'update_config_file' in self.config or \
+        self.releases = {}
+
+        assert 'update_verify_config' in self.config or \
             'installer_url' in self.config or \
             'installer_path' in self.config, \
             'Either specify --update-config-file, --installer-url or --installer-path.'
 
-        if self.config.get('update_config_file'):
+        if self.config.get('update_verify_config'):
             self.updates_config_file = os.path.join(
                 dirs['tools_dir'], 'release', 'updates',
-                self.config['update_config_file']
+                self.config['update_verify_config']
+            )
+            self.tools_verify = os.path.join(
+                dirs['tools_dir'], 'release', 'updates', 'verify.py'
             )
 
         self.tools_repo = self.config.get('tools_repo',
@@ -158,12 +174,42 @@ class FirefoxUIUpdates(FirefoxUITests):
 
         We will store this information in self.releases as a list of dict per release.
         '''
-        self.releases = {}
-
         if self.installer_url or self.installer_path:
-            # We're only testing one build
             return
 
+        dirs = self.query_abs_dirs()
+        assert os.path.exists(dirs['tools_dir']), \
+            "Without the tools/ checkout we can't use releng's config parser."
+
+        # Import the config parser
+        sys.path.insert(1, os.path.join(dirs['tools_dir'], 'lib', 'python'))
+        from release.updates.verify import UpdateVerifyConfig
+
+        verifyConfig = UpdateVerifyConfig()
+        verifyConfig.read(self.updates_config_file)
+        myVerifyConfig = verifyConfig.getChunk(
+            int(self.config['total_chunks']),
+            int(self.config['this_chunk'])
+        )
+        for release_info in myVerifyConfig.releases:
+            # We filter out releases that are older than Gecko 38
+            if release_info['release'] < '38.0':
+                break
+
+            if 'ftp_server_from' in release_info \
+                    and release_info['build_id'] not in self.releases:
+                self.debug('Read information about %s %s' % \
+                          (release_info['build_id'], release_info['release']))
+                self.releases[release_info['build_id']] = release_info
+
+    @PreScriptAction('run-tests')
+    def _pre_run_tests(self, action):
+        if self.releases is None and (not self.installer_url and not self.installer_path):
+            # XXX: re-evaluate this idea
+            self.critical('You need to call --determine-testing-configuration as well.')
+            print release
+        import pdb; pdb.set_trace()
+        '''
         content = []
         content = self.read_from_file(self.updates_config_file, verbose=False)
 
@@ -193,6 +239,7 @@ class FirefoxUIUpdates(FirefoxUITests):
                 self.debug('Read information about %s %s' % \
                           (release_info['build_id'], release_info['release']))
                 self.releases[release_info['build_id']] = release_info
+        '''
 
     @PreScriptAction('run-tests')
     def _pre_run_tests(self, action):
@@ -256,6 +303,26 @@ class FirefoxUIUpdates(FirefoxUITests):
     def run_tests(self):
         dirs = self.query_abs_dirs()
 
+        for release in self.releases.values():
+            print '%s %s' % (release['build_id'], ' '.join(release['locales']))
+            print release
+            for locale in release['locales']:
+                # Determine from where to download the file
+                url = '%s/%s' % (
+                    release['ftp_server_from'],
+                    release['from'].replace('%locale%', locale)
+                )
+
+                '''
+                installer_path = self.download_file(
+                    url=url,
+                    parent_dir=dirs['abs_work_dir']
+                )
+
+                self._run_test(installer_path, release['channel'])
+                '''
+
+        '''
         if self.installer_url:
             self.installer_path = self.download_file(
                 self.installer_url,
@@ -274,14 +341,13 @@ class FirefoxUIUpdates(FirefoxUITests):
                         release['from'].replace('%locale%', locale)
                     )
 
-                    '''
                     installer_path = self.download_file(
                         url=url,
                         parent_dir=dirs['abs_work_dir']
                     )
 
                     self._run_test(installer_path, release['channel'])
-                    '''
+        '''
 
 
 if __name__ == '__main__':
