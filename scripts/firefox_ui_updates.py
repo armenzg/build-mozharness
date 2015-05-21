@@ -151,13 +151,14 @@ class FirefoxUIUpdates(FirefoxUITests):
 
     def determine_testing_configuration(self):
         '''
-        This method builds a testing matrix either based on:
-           * Specified --installer-url
-           * Update verification configuration file
+        This method builds a testing matrix either based on an update verification 
+        configuration file under the tools repo (release/updates/*.cfg)
 
-        Each line of the releng configuration files look like this:
-            NOTE: I'm showing each pair of information as a new line but in reality
-            there is one white space separting them.
+        Each line of the releng configuration files look like this (this is for the full
+        release tests rather than the other formar for quick tests):
+
+        NOTE: I'm showing each pair of information as a new line but in reality
+        there is one white space separting them.
 
             release="38.0"
             product="Firefox"
@@ -191,16 +192,21 @@ class FirefoxUIUpdates(FirefoxUITests):
             int(self.config['total_chunks']),
             int(self.config['this_chunk'])
         )
-        for release_info in myVerifyConfig.releases:
+        for release_info in myVerifyConfig.getFullReleaseTests():
+            #import pdb; pdb.set_trace()
             # We filter out releases that are older than Gecko 38
             if release_info['release'] < '38.0':
-                break
+                continue 
+            print '%s %s %s' % (release_info['build_id'],
+                    release_info['locales'], release_info.get('from', '-'))
 
             if 'ftp_server_from' in release_info \
                     and release_info['build_id'] not in self.releases:
                 self.debug('Read information about %s %s' % \
                           (release_info['build_id'], release_info['release']))
                 self.releases[release_info['build_id']] = release_info
+        print len(self.releases)
+        exit(1)
 
     @PreScriptAction('run-tests')
     def _pre_run_tests(self, action):
