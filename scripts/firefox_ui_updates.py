@@ -186,66 +186,26 @@ class FirefoxUIUpdates(FirefoxUITests):
         sys.path.insert(1, os.path.join(dirs['tools_dir'], 'lib', 'python'))
         from release.updates.verify import UpdateVerifyConfig
 
-        verifyConfig = UpdateVerifyConfig()
-        verifyConfig.read(self.updates_config_file)
-        myVerifyConfig = verifyConfig.getChunk(
+        all_config = UpdateVerifyConfig()
+        all_config.read(self.updates_config_file)
+        new_config = all_config.getChunk(1, 1)
+        new_config.releases = [r for r in new_config.releases if int(r["release"][0:1]) >= 38]
+        chunked_config = new_config.getChunk(
             int(self.config['total_chunks']),
             int(self.config['this_chunk'])
         )
-        for release_info in myVerifyConfig.getFullReleaseTests():
-            #import pdb; pdb.set_trace()
+
+        for release_info in chunked_config.getFullReleaseTests():
+            ri = release_info
             # We filter out releases that are older than Gecko 38
-            if release_info['release'] < '38.0':
-                continue 
-            print '%s %s %s' % (release_info['build_id'],
-                    release_info['locales'], release_info.get('from', '-'))
+            print '%s %s %s %s' % \
+                    (ri['release'], ri['build_id'], ri['locales'], ri.get('from', '-'))
 
             if 'ftp_server_from' in release_info \
                     and release_info['build_id'] not in self.releases:
                 self.debug('Read information about %s %s' % \
                           (release_info['build_id'], release_info['release']))
                 self.releases[release_info['build_id']] = release_info
-        print len(self.releases)
-        exit(1)
-
-    @PreScriptAction('run-tests')
-    def _pre_run_tests(self, action):
-        if self.releases is None and (not self.installer_url and not self.installer_path):
-            # XXX: re-evaluate this idea
-            self.critical('You need to call --determine-testing-configuration as well.')
-            print release
-        import pdb; pdb.set_trace()
-        '''
-        content = []
-        content = self.read_from_file(self.updates_config_file, verbose=False)
-
-        for line in content.splitlines():
-            release_info = {}
-            # The left double quote is handled here
-            blocks = line.split('" ')
-            # The right double quote is handled here
-            for b in blocks:
-                key, value = b.split('="')
-
-                # We filter out releases that are older than Gecko 38
-                if key == 'release' and value < '38.0':
-                    release_info = None
-                    break
-
-                if key == 'locales':
-                    # locales is the only key with multiple values separated by a white space
-                    release_info[key] = value.split(' ')
-                else:
-                    # Store value
-                    release_info[key] = value
-
-            if release_info is not None \
-                    and 'ftp_server_from' in release_info \
-                    and release_info['build_id'] not in self.releases:
-                self.debug('Read information about %s %s' % \
-                          (release_info['build_id'], release_info['release']))
-                self.releases[release_info['build_id']] = release_info
-        '''
 
     @PreScriptAction('run-tests')
     def _pre_run_tests(self, action):
@@ -311,7 +271,6 @@ class FirefoxUIUpdates(FirefoxUITests):
 
         for release in self.releases.values():
             print '%s %s' % (release['build_id'], ' '.join(release['locales']))
-            print release
             for locale in release['locales']:
                 # Determine from where to download the file
                 url = '%s/%s' % (
