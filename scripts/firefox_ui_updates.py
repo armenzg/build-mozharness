@@ -67,6 +67,10 @@ class FirefoxUIUpdates(FirefoxUITests):
                 'default': 1,
                 'help': 'Total chunks to dive the locales into.',
             }],
+            [['--dry-run'], {
+                'dest': 'dry_run',
+                'help': 'Only show what was going to be tested.',
+            }],
             # These are options when we don't use the releng update config file
             [['--installer-url'], {
                 'dest': 'installer_url',
@@ -92,11 +96,12 @@ class FirefoxUIUpdates(FirefoxUITests):
         dirs = self.query_abs_dirs()
 
         self.releases = {}
+        print self.config.keys()
 
         assert 'update_verify_config' in self.config or \
             'installer_url' in self.config or \
             'installer_path' in self.config, \
-            'Either specify --update-config-file, --installer-url or --installer-path.'
+            'Either specify --update-verify-config, --installer-url or --installer-path.'
 
         if self.config.get('update_verify_config'):
             self.updates_config_file = os.path.join(
@@ -188,24 +193,18 @@ class FirefoxUIUpdates(FirefoxUITests):
 
         all_config = UpdateVerifyConfig()
         all_config.read(self.updates_config_file)
-        new_config = all_config.getChunk(1, 1)
-        new_config.releases = [r for r in new_config.releases if int(r["release"][0:1]) >= 38]
-        chunked_config = new_config.getChunk(
+        # Filter out any releases before Gecko 38
+        all_config.releases = [r for r in all_config.releases \
+                if int(r["release"].split('.')[0]) >= 38]
+        # Grab releases which contain the "from" field
+        # this only has the latest release as the one containing all locales
+        all_config.releases = all_config.getFullReleaseTests()
+        chunked_config = all_config.getChunk(
             int(self.config['total_chunks']),
             int(self.config['this_chunk'])
         )
+        self.releases = chunked_config.releases
 
-        for release_info in chunked_config.getFullReleaseTests():
-            ri = release_info
-            # We filter out releases that are older than Gecko 38
-            print '%s %s %s %s' % \
-                    (ri['release'], ri['build_id'], ri['locales'], ri.get('from', '-'))
-
-            if 'ftp_server_from' in release_info \
-                    and release_info['build_id'] not in self.releases:
-                self.debug('Read information about %s %s' % \
-                          (release_info['build_id'], release_info['release']))
-                self.releases[release_info['build_id']] = release_info
 
     @PreScriptAction('run-tests')
     def _pre_run_tests(self, action):
@@ -244,7 +243,6 @@ class FirefoxUIUpdates(FirefoxUITests):
         if update_channel:
             cmd += ['--update-channel', update_channel]
 
-        '''
         return_code = self.run_command(cmd, cwd=dirs['abs_work_dir'],
                                        output_timeout=100,
                                        env=env)
@@ -264,30 +262,10 @@ class FirefoxUIUpdates(FirefoxUITests):
 
         os.remove(installer_path)
         os.remove(harness_log)
-        '''
 
     def run_tests(self):
         dirs = self.query_abs_dirs()
 
-        for release in self.releases.values():
-            print '%s %s' % (release['build_id'], ' '.join(release['locales']))
-            for locale in release['locales']:
-                # Determine from where to download the file
-                url = '%s/%s' % (
-                    release['ftp_server_from'],
-                    release['from'].replace('%locale%', locale)
-                )
-
-                '''
-                installer_path = self.download_file(
-                    url=url,
-                    parent_dir=dirs['abs_work_dir']
-                )
-
-                self._run_test(installer_path, release['channel'])
-                '''
-
-        '''
         if self.installer_url:
             self.installer_path = self.download_file(
                 self.installer_url,
@@ -297,8 +275,13 @@ class FirefoxUIUpdates(FirefoxUITests):
         if self.installer_path:
             self._run_test(self.installer_path)
         else:
-            for release in self.releases.values():
-                print '%s %s' % (release['build_id'], ' '.join(release['locales']))
+            for release in self.releases:
+                if self.config['dry_run']:
+                    ri = release
+                    print '%s\t%s %s %s' % \
+                            (ri['release'], ri['build_id'], ri['from'], ri['locales'][0:3])
+                    continue
+
                 for locale in release['locales']:
                     # Determine from where to download the file
                     url = '%s/%s' % (
@@ -312,7 +295,6 @@ class FirefoxUIUpdates(FirefoxUITests):
                     )
 
                     self._run_test(installer_path, release['channel'])
-        '''
 
 
 if __name__ == '__main__':

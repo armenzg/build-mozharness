@@ -28,7 +28,7 @@ class FirefoxUITests(VCSToolsScript, VirtualenvMixin):
         }],
     ]
 
-    def __init__(self, config=[], config_options=[], all_actions=[]):
+    def __init__(self, config_options=[], all_actions=[]):
         self.config_options += config_options
 
         if all_actions is None:
@@ -42,7 +42,6 @@ class FirefoxUITests(VCSToolsScript, VirtualenvMixin):
 
         super(FirefoxUITests, self).__init__(
             config_options=self.config_options,
-            config=config,
             all_actions=all_actions,
         )
 
