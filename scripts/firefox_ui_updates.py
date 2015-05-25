@@ -96,7 +96,7 @@ class FirefoxUIUpdates(FirefoxUITests):
 
         dirs = self.query_abs_dirs()
 
-        self.releases = {}
+        self.releases = []
 
         assert 'update_verify_config' in self.config or \
             'installer_url' in self.config or \
@@ -154,13 +154,20 @@ class FirefoxUIUpdates(FirefoxUITests):
             vcs='hgtool'
         )
 
+    # Variation from tools' verify.py
+    def get_release(self, releases, build_id):
+        for r in releases:
+            if r["build_id"] == build_id:
+                return r
+        return {}
 
     def determine_testing_configuration(self):
         '''
         This method builds a testing matrix either based on an update verification
         configuration file under the tools repo (release/updates/*.cfg)
+        OR it skips it when we use --installer-url --installer-path
 
-        Each line of the releng configuration files look like.
+        Each release info line of the update verification files look similar to the following.
 
         NOTE: This shows each pair of information as a new line but in reality
         there is one white space separting them. We only show the values we care for.
@@ -173,7 +180,12 @@ class FirefoxUIUpdates(FirefoxUITests):
             from="/firefox/releases/38.0b9/linux-x86_64/%locale%/firefox-38.0b9.tar.bz2"
             ftp_server_from="http://stage.mozilla.org/pub/mozilla.org"
 
-        We will store this information in self.releases as a list of dict per release.
+        We will store this information in self.releases as a list of releases.
+
+        NOTE: We will talk of full and quick releases. Full release info normally contains a subset
+        of all locales (except for the most recent releases). A quick release has all locales,
+        however, it misses the fields 'from' and 'ftp_server_from'.
+        Both pairs of information complement each other but differ in such manner.
         '''
         if self.installer_url or self.installer_path:
             return
@@ -193,31 +205,30 @@ class FirefoxUIUpdates(FirefoxUITests):
         uvc.releases = [r for r in uvc.releases \
                 if int(r["release"].split('.')[0]) >= 38]
 
-        # We need
-        #uvc.releases = uvc.getFullReleaseTests()
-
+        # We need to keep the original update verify config instance untouched
+        original_releases = uvc.releases
+        # We need to get rid of the full releases before chunking
+        # otherwise we do chunking with reduced sets of locales and duplicate release info
+        uvc.releases = uvc.getQuickReleaseTests()
         chunked_config = uvc.getChunk(
             int(self.config['total_chunks']),
             int(self.config['this_chunk'])
         )
+        uvc.releases = original_releases
 
-        # Let's iterate over all releases that have the 'from' field specified - getFullReleaseTests()
-        # Let's grab the 'from' and 'ftp_server_from' values we need from them
+        # Let's grab the 'from' and 'ftp_server_from' values we need from the full releases 
+        full_releases = uvc.getFullReleaseTests()
         temp_releases = []
-        for r in chunked_config.getFullReleaseTests():
-            # Let's grab the info of the quick release (does not contain the 'from' value), however,
-            # it contains all locales instead of a subset
-            quick_release = uvc.getRelease(
-                    build_id=r['build_id'],
-                    from_path=None
+        for quick_release in chunked_config.releases: 
+            # Let's find the associated full release
+            full_release = self.get_release(
+                releases=full_releases,
+                build_id=quick_release['build_id']
             )
 
-            if quick_release == {}:
-                self.info("The latest release with %s build ID does not need to be tested." % r['build_id'])
-                continue
-
-            quick_release['from'] = r['from']
-            quick_release['ftp_server_from'] = r['ftp_server_from']
+            # Let's grab the values we're missing
+            quick_release['from'] = full_release['from']
+            quick_release['ftp_server_from'] = full_release['ftp_server_from']
             temp_releases.append(quick_release)
 
         self.releases = temp_releases
@@ -296,9 +307,8 @@ class FirefoxUIUpdates(FirefoxUITests):
             for release in self.releases:
                 if self.config['dry_run']:
                     ri = release
-                    print release
-                    print '%s\t%s %s - %s locales' % \
-                            (ri['release'], ri['build_id'], ri['from'], len(ri['locales']))
+                    print '%s %s - %s locales' % \
+                            (ri['build_id'], ri['from'], len(ri['locales']))
                     continue
 
                 for locale in release['locales']:
