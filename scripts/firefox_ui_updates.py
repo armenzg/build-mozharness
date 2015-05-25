@@ -112,8 +112,6 @@ class FirefoxUIUpdates(FirefoxUITests):
                 dirs['tools_dir'], 'release', 'updates', 'verify.py'
             )
 
-        #self.tools_repo = self.config.get('tools_repo', 'http://hg.mozilla.org/build/tools')
-        #self.tools_tag = self.config.get('tools_tag', 'default') 
         self.tools_repo = self.config['tools_repo']
         self.tools_tag = self.config['tools_tag']
 
@@ -162,24 +160,18 @@ class FirefoxUIUpdates(FirefoxUITests):
         This method builds a testing matrix either based on an update verification
         configuration file under the tools repo (release/updates/*.cfg)
 
-        Each line of the releng configuration files look like this (this is for the full
-        release tests rather than the other formar for quick tests):
+        Each line of the releng configuration files look like.
 
         NOTE: This shows each pair of information as a new line but in reality
-        there is one white space separting them.
+        there is one white space separting them. We only show the values we care for.
 
             release="38.0"
-            product="Firefox"
             platform="Linux_x86_64-gcc3"
             build_id="20150429135941"
             locales="ach af ... zh-TW"
             channel="beta-localtest"
-            patch_types="complete partial"
             from="/firefox/releases/38.0b9/linux-x86_64/%locale%/firefox-38.0b9.tar.bz2"
-            aus_server="https://aus4.mozilla.org"
             ftp_server_from="http://stage.mozilla.org/pub/mozilla.org"
-            ftp_server_to="http://stage.mozilla.org/pub/mozilla.org"
-            to="/firefox/candidates/38.0-candidates/build2/linux-x86_64/%locale%/firefox-38.0.tar.bz2"
 
         We will store this information in self.releases as a list of dict per release.
         '''
@@ -194,24 +186,46 @@ class FirefoxUIUpdates(FirefoxUITests):
         sys.path.insert(1, os.path.join(dirs['tools_dir'], 'lib', 'python'))
         from release.updates.verify import UpdateVerifyConfig
 
-        all_config = UpdateVerifyConfig()
-        all_config.read(self.updates_config_file)
-        # Filter out any releases before Gecko 38
-        all_config.releases = [r for r in all_config.releases \
+        uvc = UpdateVerifyConfig()
+        uvc.read(self.updates_config_file)
+
+        # Filter out any releases that are less than Gecko 38
+        uvc.releases = [r for r in uvc.releases \
                 if int(r["release"].split('.')[0]) >= 38]
-        # Grab releases which contain the "from" field
-        # this only has the latest release as the one containing all locales
-        all_config.releases = all_config.getFullReleaseTests()
-        chunked_config = all_config.getChunk(
+
+        # We need
+        #uvc.releases = uvc.getFullReleaseTests()
+
+        chunked_config = uvc.getChunk(
             int(self.config['total_chunks']),
             int(self.config['this_chunk'])
         )
-        self.releases = chunked_config.releases
+
+        # Let's iterate over all releases that have the 'from' field specified - getFullReleaseTests()
+        # Let's grab the 'from' and 'ftp_server_from' values we need from them
+        temp_releases = []
+        for r in chunked_config.getFullReleaseTests():
+            # Let's grab the info of the quick release (does not contain the 'from' value), however,
+            # it contains all locales instead of a subset
+            quick_release = uvc.getRelease(
+                    build_id=r['build_id'],
+                    from_path=None
+            )
+
+            if quick_release == {}:
+                self.info("The latest release with %s build ID does not need to be tested." % r['build_id'])
+                continue
+
+            quick_release['from'] = r['from']
+            quick_release['ftp_server_from'] = r['ftp_server_from']
+            temp_releases.append(quick_release)
+
+        self.releases = temp_releases
 
 
     @PreScriptAction('run-tests')
     def _pre_run_tests(self, action):
-        if self.releases is None or not self.installer_url or not self.installer_path:
+        if self.releases is None and not (self.installer_url or self.installer_path):
             # XXX: re-evaluate this idea
             self.critical('You need to call --determine-testing-configuration as well.')
             exit(1)
@@ -266,6 +280,7 @@ class FirefoxUIUpdates(FirefoxUITests):
         os.remove(installer_path)
         os.remove(harness_log)
 
+
     def run_tests(self):
         dirs = self.query_abs_dirs()
 
@@ -281,8 +296,9 @@ class FirefoxUIUpdates(FirefoxUITests):
             for release in self.releases:
                 if self.config['dry_run']:
                     ri = release
-                    print '%s\t%s %s %s' % \
-                            (ri['release'], ri['build_id'], ri['from'], ri['locales'][0:3])
+                    print release
+                    print '%s\t%s %s - %s locales' % \
+                            (ri['release'], ri['build_id'], ri['from'], len(ri['locales']))
                     continue
 
                 for locale in release['locales']:
