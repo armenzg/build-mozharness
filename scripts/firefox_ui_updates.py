@@ -49,8 +49,9 @@ class FirefoxUIUpdates(FirefoxUITests):
                 'default': 'http://hg.mozilla.org/build/tools',
                 'help': 'which tools repo to check out',
             }],
-            [['--tools-revision'], {
-                'dest': 'tools_revision',
+            [['--tools-tag'], {
+                'dest': 'tools_tag',
+                'default': 'default',
                 'help': 'which revision/tag to use for tools',
             }],
             [['--update-verify-config'], {
@@ -96,7 +97,6 @@ class FirefoxUIUpdates(FirefoxUITests):
         dirs = self.query_abs_dirs()
 
         self.releases = {}
-        print self.config.keys()
 
         assert 'update_verify_config' in self.config or \
             'installer_url' in self.config or \
@@ -112,8 +112,11 @@ class FirefoxUIUpdates(FirefoxUITests):
                 dirs['tools_dir'], 'release', 'updates', 'verify.py'
             )
 
-        self.tools_repo = self.config.get('tools_repo',
-                                          'http://hg.mozilla.org/build/tools')
+        #self.tools_repo = self.config.get('tools_repo', 'http://hg.mozilla.org/build/tools')
+        #self.tools_tag = self.config.get('tools_tag', 'default') 
+        self.tools_repo = self.config['tools_repo']
+        self.tools_tag = self.config['tools_tag']
+
         self.installer_url = self.config.get('installer_url')
         self.installer_path = self.config.get('installer_path')
         if self.installer_path:
@@ -149,20 +152,20 @@ class FirefoxUIUpdates(FirefoxUITests):
         self.vcs_checkout(
             repo=self.tools_repo,
             dest=dirs['tools_dir'],
-            revision='default',
+            revision=self.tools_tag,
             vcs='hgtool'
         )
 
 
     def determine_testing_configuration(self):
         '''
-        This method builds a testing matrix either based on an update verification 
+        This method builds a testing matrix either based on an update verification
         configuration file under the tools repo (release/updates/*.cfg)
 
         Each line of the releng configuration files look like this (this is for the full
         release tests rather than the other formar for quick tests):
 
-        NOTE: I'm showing each pair of information as a new line but in reality
+        NOTE: This shows each pair of information as a new line but in reality
         there is one white space separting them.
 
             release="38.0"
@@ -208,7 +211,7 @@ class FirefoxUIUpdates(FirefoxUITests):
 
     @PreScriptAction('run-tests')
     def _pre_run_tests(self, action):
-        if self.releases is None and (not self.installer_url and not self.installer_path):
+        if self.releases is None or not self.installer_url or not self.installer_path:
             # XXX: re-evaluate this idea
             self.critical('You need to call --determine-testing-configuration as well.')
             exit(1)

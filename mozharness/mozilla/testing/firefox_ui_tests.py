@@ -19,6 +19,7 @@ class FirefoxUITests(VCSToolsScript, VirtualenvMixin):
     config_options = [
         [['--firefox-ui-repo'], {
             'dest': 'firefox_ui_repo',
+            'default': 'https://github.com/mozilla/firefox-ui-tests.git',
             'help': 'which firefox_ui_tests repo to use',
         }],
         [['--firefox-ui-branch'], {
@@ -45,6 +46,7 @@ class FirefoxUITests(VCSToolsScript, VirtualenvMixin):
             all_actions=all_actions,
         )
 
+        self.firefox_ui_repo = self.config['firefox_ui_repo']
         self.firefox_ui_branch = self.config['firefox_ui_branch']
 
     def query_abs_dirs(self):
@@ -69,7 +71,7 @@ class FirefoxUITests(VCSToolsScript, VirtualenvMixin):
         dirs = self.query_abs_dirs()
 
         self.vcs_checkout(
-            repo='https://github.com/mozilla/firefox-ui-tests.git',
+            repo=self.firefox_ui_repo,
             dest=dirs['fx_ui_dir'],
             branch=self.firefox_ui_branch,
             vcs='gittool'
