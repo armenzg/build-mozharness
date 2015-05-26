@@ -196,12 +196,8 @@ class FirefoxUIUpdates(FirefoxUITests):
         uvc.releases = [r for r in uvc.releases \
                 if int(r["release"].split('.')[0]) >= 38]
 
-        chunked_config = uvc.getChunk(
-            chunks=int(self.config['total_chunks']),
-            thisChunk=int(self.config['this_chunk'])
-        )
         temp_releases = []
-        for ri in chunked_config.releases:
+        for ri in uvc.releases:
             # This is the full release info
             if 'from' in ri and ri['from'] is not None:
                 # Let's find the associated quick release which contains the remaining locales
@@ -211,7 +207,12 @@ class FirefoxUIUpdates(FirefoxUITests):
                     ri['locales'] = sorted(ri['locales'] + quick_release['locales'])
                 temp_releases.append(ri)
 
-        self.releases = temp_releases 
+        uvc.releases = temp_releases
+        chunked_config = uvc.getChunk(
+            chunks=int(self.config['total_chunks']),
+            thisChunk=int(self.config['this_chunk'])
+        )
+        self.releases = chunked_config.releases
 
 
     @PreScriptAction('run-tests')
