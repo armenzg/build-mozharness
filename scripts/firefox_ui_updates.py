@@ -108,9 +108,6 @@ class FirefoxUIUpdates(FirefoxUITests):
                 dirs['tools_dir'], 'release', 'updates',
                 self.config['update_verify_config']
             )
-            self.tools_verify = os.path.join(
-                dirs['tools_dir'], 'release', 'updates', 'verify.py'
-            )
 
         self.tools_repo = self.config['tools_repo']
         self.tools_tag = self.config['tools_tag']
@@ -205,46 +202,27 @@ class FirefoxUIUpdates(FirefoxUITests):
         uvc.releases = [r for r in uvc.releases \
                 if int(r["release"].split('.')[0]) >= 38]
 
-        # We need to keep the original update verify config instance untouched
-        original_releases = uvc.releases
-        # We need to get rid of the full releases before chunking
-        # otherwise we do chunking with reduced sets of locales and duplicate release info
-        uvc.releases = uvc.getQuickReleaseTests()
         chunked_config = uvc.getChunk(
-            int(self.config['total_chunks']),
-            int(self.config['this_chunk'])
+            chunks=int(self.config['total_chunks']),
+            thisChunk=int(self.config['this_chunk'])
         )
-        uvc.releases = original_releases
-
-        # Let's grab the 'from' and 'ftp_server_from' values we need from the full releases
-        full_releases = uvc.getFullReleaseTests()
         temp_releases = []
-        for quick_release in chunked_config.releases:
-            # Let's find the associated full release
-            full_release = self.get_release(
-                releases=full_releases,
-                build_id=quick_release['build_id']
-            )
+        for ri in chunked_config.releases:
+            # This is the full release info
+            if 'from' in ri and ri['from'] is not None:
+                # Let's find the associated quick release which contains the remaining locales
+                # for all releases except for the most recent release which contain all locales
+                quick_release = uvc.getRelease(build_id=ri['build_id'], from_path=None)
+                if quick_release != {}:
+                    ri['locales'] = sorted(ri['locales'] + quick_release['locales'])
+                temp_releases.append(ri)
 
-            # Let's grab the values we're missing
-            quick_release['from'] = full_release['from']
-            quick_release['ftp_server_from'] = full_release['ftp_server_from']
-            quick_release['channel'] = uvc.channel
-            temp_releases.append(quick_release)
-            if self.config['dry_run']:
-                self.info('Added %s %s - %s locales' % (
-                    quick_release['build_id'],
-                    quick_release['from'],
-                    len(quick_release['locales']),
-                ))
-
-        self.releases = temp_releases
+        self.releases = temp_releases 
 
 
     @PreScriptAction('run-tests')
     def _pre_run_tests(self, action):
         if self.releases is None and not (self.installer_url or self.installer_path):
-            # XXX: re-evaluate this idea
             self.critical('You need to call --determine-testing-configuration as well.')
             exit(1)
 
@@ -302,10 +280,6 @@ class FirefoxUIUpdates(FirefoxUITests):
     def run_tests(self):
         dirs = self.query_abs_dirs()
 
-        if self.config['dry_run']:
-            self.info('This is a dry-run, we will not run anything.')
-            exit(0)
-
         if self.installer_url:
             self.installer_path = self.download_file(
                 self.installer_url,
@@ -315,8 +289,11 @@ class FirefoxUIUpdates(FirefoxUITests):
         if self.installer_path:
             self._run_test(self.installer_path)
         else:
-            for release in self.releases:
-                for locale in release['locales']:
+            for ri in self.releases:
+                self.info('About to run %s %s - %s locales' % (ri['build_id'], ri['from'], len(ri['locales'])))
+                if self.config['dry_run']:
+                    continue
+                for locale in ri['locales']:
                     # Determine from where to download the file
                     url = '%s/%s' % (
                         release['ftp_server_from'],
