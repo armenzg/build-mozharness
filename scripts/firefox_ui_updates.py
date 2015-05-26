@@ -151,12 +151,6 @@ class FirefoxUIUpdates(FirefoxUITests):
             vcs='hgtool'
         )
 
-    # Variation from tools' verify.py
-    def get_release(self, releases, build_id):
-        for r in releases:
-            if r["build_id"] == build_id:
-                return r
-        return {}
 
     def determine_testing_configuration(self):
         '''
