@@ -216,10 +216,10 @@ class FirefoxUIUpdates(FirefoxUITests):
         )
         uvc.releases = original_releases
 
-        # Let's grab the 'from' and 'ftp_server_from' values we need from the full releases 
+        # Let's grab the 'from' and 'ftp_server_from' values we need from the full releases
         full_releases = uvc.getFullReleaseTests()
         temp_releases = []
-        for quick_release in chunked_config.releases: 
+        for quick_release in chunked_config.releases:
             # Let's find the associated full release
             full_release = self.get_release(
                 releases=full_releases,
@@ -229,7 +229,14 @@ class FirefoxUIUpdates(FirefoxUITests):
             # Let's grab the values we're missing
             quick_release['from'] = full_release['from']
             quick_release['ftp_server_from'] = full_release['ftp_server_from']
+            quick_release['channel'] = uvc.channel
             temp_releases.append(quick_release)
+            if self.config['dry_run']:
+                self.info('Added %s %s - %s locales' % (
+                    quick_release['build_id'],
+                    quick_release['from'],
+                    len(quick_release['locales']),
+                ))
 
         self.releases = temp_releases
 
@@ -295,6 +302,10 @@ class FirefoxUIUpdates(FirefoxUITests):
     def run_tests(self):
         dirs = self.query_abs_dirs()
 
+        if self.config['dry_run']:
+            self.info('This is a dry-run, we will not run anything.')
+            exit(0)
+
         if self.installer_url:
             self.installer_path = self.download_file(
                 self.installer_url,
@@ -305,12 +316,6 @@ class FirefoxUIUpdates(FirefoxUITests):
             self._run_test(self.installer_path)
         else:
             for release in self.releases:
-                if self.config['dry_run']:
-                    ri = release
-                    print '%s %s - %s locales' % \
-                            (ri['build_id'], ri['from'], len(ri['locales']))
-                    continue
-
                 for locale in release['locales']:
                     # Determine from where to download the file
                     url = '%s/%s' % (
