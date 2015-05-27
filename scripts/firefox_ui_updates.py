@@ -24,6 +24,7 @@ class FirefoxUIUpdates(FirefoxUITests):
     # This will be a list containing one item per release based on configs
     # from tools/release/updates/*cfg
     releases = None
+    channel = None
     harness_extra_args = [
         [['--update-allow-mar-channel'], {
             'dest': 'update_allow_mar_channel',
@@ -191,27 +192,29 @@ class FirefoxUIUpdates(FirefoxUITests):
 
         uvc = UpdateVerifyConfig()
         uvc.read(self.updates_config_file)
+        self.channel = uvc.channel
 
         # Filter out any releases that are less than Gecko 38
         uvc.releases = [r for r in uvc.releases \
                 if int(r["release"].split('.')[0]) >= 38]
 
         temp_releases = []
-        for ri in uvc.releases:
+        for rel_info in uvc.releases:
             # This is the full release info
-            if 'from' in ri and ri['from'] is not None:
+            if 'from' in rel_info and rel_info['from'] is not None:
                 # Let's find the associated quick release which contains the remaining locales
                 # for all releases except for the most recent release which contain all locales
-                quick_release = uvc.getRelease(build_id=ri['build_id'], from_path=None)
+                quick_release = uvc.getRelease(build_id=rel_info['build_id'], from_path=None)
                 if quick_release != {}:
-                    ri['locales'] = sorted(ri['locales'] + quick_release['locales'])
-                temp_releases.append(ri)
+                    rel_info['locales'] = sorted(rel_info['locales'] + quick_release['locales'])
+                temp_releases.append(rel_info)
 
         uvc.releases = temp_releases
         chunked_config = uvc.getChunk(
             chunks=int(self.config['total_chunks']),
             thisChunk=int(self.config['this_chunk'])
         )
+
         self.releases = chunked_config.releases
 
 
@@ -279,16 +282,23 @@ class FirefoxUIUpdates(FirefoxUITests):
 
         if self.installer_path:
             self._run_test(self.installer_path)
+
         else:
-            for ri in sorted(self.releases, key=lambda release: release['build_id']):
-                self.info('About to run %s %s - %s locales' % (ri['build_id'], ri['from'], len(ri['locales'])))
+            for rel_info in sorted(self.releases, key=lambda release: release['build_id']):
+                self.info('About to run %s %s - %s locales' % (
+                    rel_info['build_id'],
+                    rel_info['from'],
+                    len(rel_info['locales'])
+                ))
+
                 if self.config['dry_run']:
                     continue
-                for locale in ri['locales']:
+
+                for locale in rel_info['locales']:
                     # Determine from where to download the file
                     url = '%s/%s' % (
-                        ri['ftp_server_from'],
-                        ri['from'].replace('%locale%', locale)
+                        rel_info['ftp_server_from'],
+                        rel_info['from'].replace('%locale%', locale)
                     )
 
                     installer_path = self.download_file(
@@ -296,7 +306,7 @@ class FirefoxUIUpdates(FirefoxUITests):
                         parent_dir=dirs['abs_work_dir']
                     )
 
-                    self._run_test(installer_path, ri['channel'])
+                    self._run_test(installer_path, self.channel)
 
 
 if __name__ == '__main__':
