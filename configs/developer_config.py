@@ -35,7 +35,7 @@ config = {
     "python_webserver": True,
     "virtualenv_path": '%s/build/venv' % os.getcwd(),
 
-    # Tooltool
+    # Tooltool related
     "tooltool_cache": os.path.join(LOCAL_WORKDIR, "builds/tooltool_cache"),
     "tooltool_cache_path": os.path.join(LOCAL_WORKDIR, "builds/tooltool_cache"),
 
