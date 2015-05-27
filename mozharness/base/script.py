@@ -61,7 +61,7 @@ def platform_name():
         return 'win64'
     elif pm._is_windows() and not pm._is_64_bit():
         return 'win32'
-    else
+    else:
         return None
 
 

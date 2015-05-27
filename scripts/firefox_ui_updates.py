@@ -93,11 +93,10 @@ class FirefoxUIUpdates(FirefoxUITests):
                 'determine-testing-configuration',
                 'run-tests',
             ],
+            initial_config_file='fx_update_tests.py',
         )
 
         dirs = self.query_abs_dirs()
-
-        self.releases = []
 
         assert 'update_verify_config' in self.config or \
             'installer_url' in self.config or \
@@ -283,7 +282,6 @@ class FirefoxUIUpdates(FirefoxUITests):
         else:
             for ri in sorted(self.releases, key=lambda release: release['build_id']):
                 self.info('About to run %s %s - %s locales' % (ri['build_id'], ri['from'], len(ri['locales'])))
-                import pdb; pdb.set_trace()
                 if self.config['dry_run']:
                     continue
                 for locale in ri['locales']:
