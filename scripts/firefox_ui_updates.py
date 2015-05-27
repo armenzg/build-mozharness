@@ -16,8 +16,27 @@ import sys
 sys.path.insert(1, os.path.dirname(sys.path[0]))
 
 from mozharness.base.log import INFO
-from mozharness.base.script import PreScriptAction
+from mozharness.base.script import PreScriptAction, platform_name
 from mozharness.mozilla.testing.firefox_ui_tests import FirefoxUITests
+
+
+# These are values specific to running machines on Release Engineering machines
+# to run it locally on your machines append --cfg developer_config.py
+PLATFORM_CONFIG = {
+    'linux64': {
+        'exes': {
+            'python': '/tools/buildbot/bin/python',
+            'virtualenv': ['/tools/buildbot/bin/python', '/tools/misc-python/virtualenv.py'],
+        },
+        'env': {
+            'DISPLAY': ':2',
+        }
+    },
+    'macosx64': {},
+    'win64': {},
+}
+
+DEFAULT_CONFIG = PLATFORM_CONFIG[platform_name()]
 
 
 class FirefoxUIUpdates(FirefoxUITests):
@@ -94,7 +113,7 @@ class FirefoxUIUpdates(FirefoxUITests):
                 'determine-testing-configuration',
                 'run-tests',
             ],
-            initial_config_file='fx_update_tests.py',
+            config=DEFAULT_CONFIG,
         )
 
         dirs = self.query_abs_dirs()
@@ -229,7 +248,7 @@ class FirefoxUIUpdates(FirefoxUITests):
         '''
         All required steps for running the tests against an installer.
         '''
-        env = self.query_env(log_level=INFO)
+        env = self.query_env()
         dirs = self.query_abs_dirs()
         bin_dir = os.path.dirname(self.query_python_path())
         fx_ui_tests_bin = os.path.join(bin_dir, 'firefox-ui-update')
