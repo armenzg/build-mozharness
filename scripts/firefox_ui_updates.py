@@ -70,6 +70,7 @@ class FirefoxUIUpdates(FirefoxUITests):
             }],
             [['--dry-run'], {
                 'dest': 'dry_run',
+                'default': False,
                 'help': 'Only show what was going to be tested.',
             }],
             # These are options when we don't use the releng update config file
@@ -226,11 +227,7 @@ class FirefoxUIUpdates(FirefoxUITests):
         '''
         All required steps for running the tests against an installer.
         '''
-        # XXX: We need to fix this. If linux
-        env = {
-            'DISPLAY': ':2',
-        }
-        env = self.query_env(partial_env=env, log_level=INFO)
+        env = self.query_env(log_level=INFO)
         dirs = self.query_abs_dirs()
         bin_dir = os.path.dirname(self.query_python_path())
         fx_ui_tests_bin = os.path.join(bin_dir, 'firefox-ui-update')
@@ -284,15 +281,16 @@ class FirefoxUIUpdates(FirefoxUITests):
         if self.installer_path:
             self._run_test(self.installer_path)
         else:
-            for ri in self.releases:
+            for ri in sorted(self.releases, key=lambda release: release['build_id']):
                 self.info('About to run %s %s - %s locales' % (ri['build_id'], ri['from'], len(ri['locales'])))
+                import pdb; pdb.set_trace()
                 if self.config['dry_run']:
                     continue
                 for locale in ri['locales']:
                     # Determine from where to download the file
                     url = '%s/%s' % (
-                        release['ftp_server_from'],
-                        release['from'].replace('%locale%', locale)
+                        ri['ftp_server_from'],
+                        ri['from'].replace('%locale%', locale)
                     )
 
                     installer_path = self.download_file(
@@ -300,7 +298,7 @@ class FirefoxUIUpdates(FirefoxUITests):
                         parent_dir=dirs['abs_work_dir']
                     )
 
-                    self._run_test(installer_path, release['channel'])
+                    self._run_test(installer_path, ri['channel'])
 
 
 if __name__ == '__main__':
