@@ -340,6 +340,9 @@ class FirefoxUIUpdates(FirefoxUITests):
                         self.info('You can run the following command to reproduce the issue:')
                         self.info('python scripts/firefox_ui_updates.py --run-tests '
                                   '--installer-url %s --update-channel %s' % (url, self.channel))
+                        self.info('If you want to run this on your development machine:')
+                        self.info('python scripts/firefox_ui_updates.py cfg developer_config.py '
+                                  '--installer-url %s --update-channel %s' % (url, self.channel))
 
 
 if __name__ == '__main__':
