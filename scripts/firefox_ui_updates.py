@@ -37,6 +37,12 @@ PLATFORM_CONFIG = {
         "exes": {
             'python': sys.executable,
             'virtualenv': [sys.executable, 'c:/mozilla-build/buildbotve/virtualenv.py'],
+            'gittool.py': [
+                sys.executable,
+                os.path.join(
+                    os.getcwd(), 'build', 'tools', 'buildfarm', 'utils', 'gittool.py'
+                )
+            ],
         }
     }
 }
