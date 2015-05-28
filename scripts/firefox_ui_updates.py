@@ -10,6 +10,7 @@ Author: Armen Zambrano G.
 """
 import copy
 import os
+import urllib
 import sys
 
 # load modules from parent dir
@@ -310,9 +311,8 @@ class FirefoxUIUpdates(FirefoxUITests):
                     # Determine from where to download the file
                     url = '%s/%s' % (
                         rel_info['ftp_server_from'],
-                        rel_info['from'].replace('%locale%', locale)
+                        urllib.quote(rel_info['from'].replace('%locale%', locale))
                     )
-
                     installer_path = self.download_file(
                         url=url,
                         parent_dir=dirs['abs_work_dir']
