@@ -40,7 +40,7 @@ PLATFORM_CONFIG = {
             'gittool.py': [
                 sys.executable,
                 os.path.join(
-                    os.getcwd(), 'build', 'tools', 'buildfarm', 'utils', 'gittool.py'
+                    'c', 'builds', 'hg-shared', 'build', 'tools', 'buildfarm', 'utils', 'gittool.py'
                 )
             ],
         }
