@@ -306,14 +306,14 @@ class FirefoxUIUpdates(FirefoxUITests):
     def run_tests(self):
         dirs = self.query_abs_dirs()
 
-        if self.installer_url:
-            self.installer_path = self.download_file(
-                self.installer_url,
-                parent_dir=dirs['abs_work_dir']
-            )
+        if self.installer_url or self.installer_path:
+            if self.installer_url:
+                self.installer_path = self.download_file(
+                    self.installer_url,
+                    parent_dir=dirs['abs_work_dir']
+                )
 
-        if self.installer_path:
-            self._run_test(self.installer_path)
+            return self._run_test(self.installer_path)
 
         else:
             for rel_info in sorted(self.releases, key=lambda release: release['build_id']):
