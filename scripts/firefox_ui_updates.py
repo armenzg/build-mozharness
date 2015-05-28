@@ -20,35 +20,6 @@ from mozharness.base.script import PreScriptAction, platform_name
 from mozharness.mozilla.testing.firefox_ui_tests import FirefoxUITests
 
 
-# These are values specific to running machines on Release Engineering machines
-# to run it locally on your machines append --cfg developer_config.py
-PLATFORM_CONFIG = {
-    'linux64': {
-        'exes': {
-            'python': '/tools/buildbot/bin/python',
-            'virtualenv': ['/tools/buildbot/bin/python', '/tools/misc-python/virtualenv.py'],
-        },
-        'env': {
-            'DISPLAY': ':2',
-        }
-    },
-    'macosx64': {},
-    'win32': {
-        "exes": {
-            'python': sys.executable,
-            'hgtool.py': [sys.executable,
-                          'c:/builds/hg-shared/build/tools/buildfarm/utils/hgtool.py'],
-            'gittool.py': [sys.executable,
-                           'c:/builds/hg-shared/build/tools/buildfarm/utils/gittool.py'],
-            'virtualenv': [sys.executable,
-                           'c:/mozilla-build/buildbotve/virtualenv.py'],
-        }
-    }
-}
-
-DEFAULT_CONFIG = PLATFORM_CONFIG[platform_name()]
-
-
 class FirefoxUIUpdates(FirefoxUITests):
     # This will be a list containing one item per release based on configs
     # from tools/release/updates/*cfg
@@ -127,7 +98,6 @@ class FirefoxUIUpdates(FirefoxUITests):
                 'determine-testing-configuration',
                 'run-tests',
             ],
-            config=DEFAULT_CONFIG,
         )
 
         dirs = self.query_abs_dirs()
