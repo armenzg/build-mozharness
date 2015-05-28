@@ -16,7 +16,7 @@ import sys
 sys.path.insert(1, os.path.dirname(sys.path[0]))
 
 from mozharness.base.log import INFO
-from mozharness.base.script import PreScriptAction, platform_name
+from mozharness.base.script import PreScriptAction
 from mozharness.mozilla.testing.firefox_ui_tests import FirefoxUITests
 
 
