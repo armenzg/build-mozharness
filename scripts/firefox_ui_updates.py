@@ -36,10 +36,12 @@ PLATFORM_CONFIG = {
     'win32': {
         "exes": {
             'python': sys.executable,
-            'virtualenv': [sys.executable,
-                           'c:/mozilla-build/buildbotve/virtualenv.py'],
+            'hgtool.py': [sys.executable,
+                          'c:/builds/hg-shared/build/tools/buildfarm/utils/hgtool.py'],
             'gittool.py': [sys.executable,
                            'c:/builds/hg-shared/build/tools/buildfarm/utils/gittool.py'],
+            'virtualenv': [sys.executable,
+                           'c:/mozilla-build/buildbotve/virtualenv.py'],
         }
     }
 }
