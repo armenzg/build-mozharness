@@ -122,11 +122,6 @@ class FirefoxUIUpdates(FirefoxUITests):
 
         dirs = self.query_abs_dirs()
 
-        assert 'update_verify_config' in self.config or \
-            'installer_url' in self.config or \
-            'installer_path' in self.config, \
-            'Either specify --update-verify-config, --installer-url or --installer-path.'
-
         if self.config.get('update_verify_config'):
             self.updates_config_file = os.path.join(
                 dirs['tools_dir'], 'release', 'updates',
@@ -138,10 +133,19 @@ class FirefoxUIUpdates(FirefoxUITests):
 
         self.installer_url = self.config.get('installer_url')
         self.installer_path = self.config.get('installer_path')
+
         if self.installer_path:
             if not os.path.exists(self.installer_path):
-                self.critical("Please make sure that the path to the installer exists.")
+                self.critical('Please make sure that the path to the installer exists.')
                 exit(1)
+
+        if self.installer_url or self.installer_path:
+            assert self.firefox_ui_branch, \
+                'When you use --installer-url or --installer-path you need to specify ' \
+                '--firefox-ui-branch. Valid values are mozilla-{central,aurora,beta,release,esr38}.'
+
+        assert 'update_verify_config' in self.config or self.installer_url or self.installer_path, \
+            'Either specify --update-verify-config, --installer-url or --installer-path.'
 
 
     def query_abs_dirs(self):
@@ -339,10 +343,12 @@ class FirefoxUIUpdates(FirefoxUITests):
                         self.warning('FAIL: firefox-ui-update has failed.' )
                         self.info('You can run the following command to reproduce the issue:')
                         self.info('python scripts/firefox_ui_updates.py --run-tests '
-                                  '--installer-url %s --update-channel %s' % (url, self.channel))
+                                  '--installer-url %s --update-channel %s --firefox-ui-branch %s'
+                                  % (url, self.channel, self.firefox_ui_branch))
                         self.info('If you want to run this on your development machine:')
-                        self.info('python scripts/firefox_ui_updates.py cfg developer_config.py '
-                                  '--installer-url %s --update-channel %s' % (url, self.channel))
+                        self.info('python scripts/firefox_ui_updates.py --cfg developer_config.py '
+                                  '--installer-url %s --update-channel %s --firefox-ui-branch %s'
+                                  % (url, self.channel, self.firefox_ui_branch))
 
 
 if __name__ == '__main__':
