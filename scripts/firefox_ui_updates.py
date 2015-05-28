@@ -33,7 +33,12 @@ PLATFORM_CONFIG = {
         }
     },
     'macosx64': {},
-    'win64': {},
+    'win32': {
+        "exes": {
+            'python': sys.executable,
+            'virtualenv': [sys.executable, 'c:/mozilla-build/buildbotve/virtualenv.py'],
+        }
+    }
 }
 
 DEFAULT_CONFIG = PLATFORM_CONFIG[platform_name()]
