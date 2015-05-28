@@ -11,7 +11,7 @@ Author: Armen Zambrano G.
 import sys
 import os
 
-from mozharness.base.python import PreScriptAction, VirtualenvMixin
+from mozharness.base.python import PreScriptAction, VirtualenvMixin, platform_name
 from mozharness.mozilla.vcstools import VCSToolsScript
 
 # These are values specific to running machines on Release Engineering machines
