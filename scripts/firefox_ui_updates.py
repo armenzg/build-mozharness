@@ -280,7 +280,7 @@ class FirefoxUIUpdates(FirefoxUITests):
 
         if cleanup:
             for filepath in (installer_path, gecko_log, harness_log):
-                if os.path.exists(filepath) os.remove(filepath)
+                os.remove(filepath) if os.path.exists(filepath)
 
         return return_code
 
