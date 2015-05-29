@@ -8,6 +8,7 @@
 
 Author: Armen Zambrano G.
 """
+import copy
 import sys
 import os
 
