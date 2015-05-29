@@ -233,7 +233,7 @@ class FirefoxUIUpdates(FirefoxUITests):
             exit(1)
 
 
-    def _run_test(self, installer_path, update_channel=None):
+    def _run_test(self, installer_path, update_channel=None, cleanup=True):
         '''
         All required steps for running the tests against an installer.
         '''
@@ -243,6 +243,7 @@ class FirefoxUIUpdates(FirefoxUITests):
         fx_ui_tests_bin = os.path.join(bin_dir, 'firefox-ui-update')
         harness_log=os.path.join(dirs['abs_work_dir'], 'harness.log')
         gecko_log=os.path.join(dirs['abs_work_dir'], 'gecko.log')
+
         # Build the command
         cmd = [
             fx_ui_tests_bin,
@@ -277,8 +278,9 @@ class FirefoxUIUpdates(FirefoxUITests):
                 self.warning(contents)
             self.warning('== End of gecko output ==')
 
-        os.remove(installer_path)
-        os.remove(harness_log)
+        if cleanup:
+            for filepath in (installer_path, gecko_log, harness_log):
+                if os.path.exists(filepath) os.remove(filepath)
 
         return return_code
 
@@ -293,7 +295,7 @@ class FirefoxUIUpdates(FirefoxUITests):
                     parent_dir=dirs['abs_work_dir']
                 )
 
-            return self._run_test(self.installer_path)
+            return self._run_test(self.installer_path, cleanup=False)
 
         else:
             for rel_info in sorted(self.releases, key=lambda release: release['build_id']):
