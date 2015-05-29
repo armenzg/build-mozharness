@@ -49,6 +49,10 @@ PLATFORM_CONFIG = {
 DEFAULT_CONFIG = PLATFORM_CONFIG[platform_name()]
 DEFAULT_CONFIG.update({
     'pip_index': False,
+    "find_links": [
+        "http://pypi.pvt.build.mozilla.org/pub",
+        "http://pypi.pub.build.mozilla.org/pub",
+    ],
 })
 
 
