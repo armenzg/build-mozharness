@@ -12,7 +12,11 @@ import sys
 import os
 
 from mozharness.base.script import platform_name
-from mozharness.base.python import PreScriptAction, VirtualenvMixin
+from mozharness.base.python import (
+    PreScriptAction,
+    VirtualenvMixin,
+    virtualenv_config_options,
+)
 from mozharness.mozilla.vcstools import VCSToolsScript
 
 # These are values specific to running machines on Release Engineering machines
@@ -42,6 +46,9 @@ PLATFORM_CONFIG = {
 }
 
 DEFAULT_CONFIG = PLATFORM_CONFIG[platform_name()]
+DEFAULT_CONFIG.update({
+    'pip_index': False,
+})
 
 
 class FirefoxUITests(VCSToolsScript, VirtualenvMixin):
@@ -56,7 +63,7 @@ class FirefoxUITests(VCSToolsScript, VirtualenvMixin):
             'default': 'master',
             'help': 'which branch to use for firefox_ui_tests',
         }],
-    ]
+    ] + copy.deepcopy(virtualenv_config_options)
 
     def __init__(self, config_options=[], all_actions=[], **kwargs):
         self.config_options += config_options
