@@ -20,6 +20,7 @@ from mozharness.base.python import (
 )
 from mozharness.mozilla.vcstools import VCSToolsScript
 
+PYTHON_WIN32 = 'c:/mozilla-build/python27/python.exe'
 # These are values specific to running machines on Release Engineering machines
 # to run it locally on your machines append --cfg developer_config.py
 PLATFORM_CONFIG = {
@@ -36,24 +37,22 @@ PLATFORM_CONFIG = {
     'win32': {
         "exes": {
             # Otherwise, depending on the PATH we can pick python 2.6 up
-            'python': 'c:/mozilla-build/python27/python.exe',
-            'hgtool.py': [sys.executable,
-                          'c:/builds/hg-shared/build/tools/buildfarm/utils/hgtool.py'],
-            'gittool.py': [sys.executable,
-                           'c:/builds/hg-shared/build/tools/buildfarm/utils/gittool.py'],
-            'virtualenv': [sys.executable,
-                           'c:/mozilla-build/buildbotve/virtualenv.py'],
+            'python': PYTHON_WIN32,
+            'hgtool.py': [PYTHON_WIN32, 'c:/builds/hg-shared/build/tools/buildfarm/utils/hgtool.py'],
+            'gittool.py': [PYTHON_WIN32, 'c:/builds/hg-shared/build/tools/buildfarm/utils/gittool.py'],
+            'virtualenv': [PYTHON_WIN32, 'c:/mozilla-build/buildbotve/virtualenv.py'],
         }
     }
 }
 
 DEFAULT_CONFIG = PLATFORM_CONFIG[platform_name()]
 DEFAULT_CONFIG.update({
-    'pip_index': False,
     "find_links": [
         "http://pypi.pvt.build.mozilla.org/pub",
         "http://pypi.pub.build.mozilla.org/pub",
     ],
+    'pip_index': False,
+    'virtualenv_path': 'venv',
 })
 
 

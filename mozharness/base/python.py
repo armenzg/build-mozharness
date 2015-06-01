@@ -99,9 +99,6 @@ class VirtualenvMixin(object):
             else:
                 virtualenv = os.path.join(dirs['abs_work_dir'],
                                           c['virtualenv_path'])
-        else:
-            # If no value has been set use a default dir
-            virtualenv = os.path.join(dirs['abs_work_dir'], 'venv')
         return virtualenv
 
     def query_python_path(self, binary="python"):
