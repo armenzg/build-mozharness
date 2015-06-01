@@ -2,6 +2,7 @@
 # on Release Engineering machines inside the VPN
 from mozharness.base.script import platform_name
 
+# These are values specific to each platform on Release Engineering machines
 PYTHON_WIN32 = 'c:/mozilla-build/python27/python.exe'
 # These are values specific to running machines on Release Engineering machines
 # to run it locally on your machines append --cfg developer_config.py
@@ -27,8 +28,9 @@ PLATFORM_CONFIG = {
     }
 }
 
-DEFAULT_CONFIG = PLATFORM_CONFIG[platform_name()]
-DEFAULT_CONFIG.update({
+config = PLATFORM_CONFIG[platform_name()]
+# Generic values
+config.update({
     "find_links": [
         "http://pypi.pvt.build.mozilla.org/pub",
         "http://pypi.pub.build.mozilla.org/pub",
