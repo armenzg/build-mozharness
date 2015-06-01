@@ -65,7 +65,6 @@ class FirefoxUITests(VCSToolsScript, VirtualenvMixin):
         }],
         [['--firefox-ui-branch'], {
             'dest': 'firefox_ui_branch',
-            'default': 'master',
             'help': 'which branch to use for firefox_ui_tests',
         }],
     ] + copy.deepcopy(virtualenv_config_options)
@@ -90,7 +89,10 @@ class FirefoxUITests(VCSToolsScript, VirtualenvMixin):
         )
 
         self.firefox_ui_repo = self.config['firefox_ui_repo']
-        self.firefox_ui_branch = self.config['firefox_ui_branch']
+        try:
+            self.firefox_ui_branch = self.config['firefox_ui_branch']
+        except:
+            self.fatal('Please specify --firefox-ui-branch')
 
     def query_abs_dirs(self):
         if self.abs_dirs:
