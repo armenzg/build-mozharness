@@ -35,7 +35,8 @@ PLATFORM_CONFIG = {
     'macosx64': {},
     'win32': {
         "exes": {
-            'python': sys.executable,
+            # Otherwise, depending on the PATH we can pick python 2.6 up
+            'python': 'c:/mozilla-build/python27/python.exe',
             'hgtool.py': [sys.executable,
                           'c:/builds/hg-shared/build/tools/buildfarm/utils/hgtool.py'],
             'gittool.py': [sys.executable,
