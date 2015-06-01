@@ -13,7 +13,8 @@ ADJUST_MOUSE_AND_SCREEN = True
 config = {
     "buildbot_json_path": "buildprops.json",
     "exes": {
-        'python': sys.executable,
+        # Otherwise, depending on the PATH we can pick python 2.6 up
+        'python': 'c:/mozilla-build/python27/python.exe',
         'virtualenv': [sys.executable, 'c:/mozilla-build/buildbotve/virtualenv.py'],
         'hg': 'c:/mozilla-build/hg/hg',
         'mozinstall': ['%s/build/venv/scripts/python' % os.getcwd(),
