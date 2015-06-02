@@ -1371,8 +1371,33 @@ or run without that action (ie: --no-{action})"
         task = tc.create_task()
         tc.claim_task(task)
 
+        # Some trees may not be setting uploadFiles, so default to []. Normally
+        # we'd only expect to get here if the build completes successfully,
+        # which means we should have uploadFiles.
+        files = self.query_buildbot_property('uploadFiles') or []
+        if not files:
+            self.warning('No files from the build system to upload to S3: uploadFiles property is missing or empty.')
+
         packageName = self.query_buildbot_property('packageFilename')
         self.info('packageFilename is: %s' % packageName)
+
+        if self.config.get('use_package_as_marfile'):
+            self.info('Using packageUrl for the MAR file')
+            self.set_buildbot_property('completeMarUrl',
+                                       self.query_buildbot_property('packageUrl'),
+                                       write_to_file=True)
+
+            # Find the full path to the package in uploadFiles so we can
+            # get the size/hash of the mar
+            for upload_file in files:
+                if upload_file.endswith(packageName):
+                    self.set_buildbot_property('completeMarSize',
+                                               self.query_filesize(upload_file),
+                                               write_to_file=True)
+                    self.set_buildbot_property('completeMarHash',
+                                               self.query_sha512sum(upload_file),
+                                               write_to_file=True)
+                    break
 
         property_conditions = [
             # key: property name, value: condition
@@ -1391,6 +1416,7 @@ or run without that action (ie: --no-{action})"
             ('partialMarUrlTC', lambda m: m.endswith('.mar') and '.partial.' in m),
             ('codeCoverageURL', lambda m: m.endswith('code-coverage-gcno.zip')),
             ('sdkUrl', lambda m: m.endswith(('sdk.tar.bz2', 'sdk.zip'))),
+            ('testPackagesUrl', lambda m: m.endswith('test_packages.json')),
             ('packageUrl', lambda m: m.endswith(packageName)),
         ]
 
@@ -1404,14 +1430,8 @@ or run without that action (ie: --no-{action})"
             '.tar.bz2',
             '.tar.gz',
             '.zip',
+            '.json',
         )
-
-        # Some trees may not be setting uploadFiles, so default to []. Normally
-        # we'd only expect to get here if the build completes successfully,
-        # which means we should have uploadFiles.
-        files = self.query_buildbot_property('uploadFiles') or []
-        if not files:
-            self.warning('No files from the build system to upload to S3: uploadFiles property is missing or empty.')
 
         # Also upload our mozharness log files
         files.extend([os.path.join(self.log_obj.abs_log_dir, x) for x in self.log_obj.log_files.values()])
@@ -1746,6 +1766,12 @@ or run without that action (ie: --no-{action})"
             self.return_code = 1
             return
         tests_url = self.query_buildbot_property('testsUrl')
+        # Contains the url to a manifest describing the test packages required
+        # for each unittest harness.
+        # For the moment this property is only set on desktop builds. Android
+        # and b2g builds find the packages manifest based on the upload
+        # directory of the installer.
+        test_packages_url = self.query_buildbot_property('testPackagesUrl')
         pgo_build = c.get('pgo_build', False) or self._compile_against_pgo()
 
         # these cmds are sent to mach through env vars. We won't know the
@@ -1789,7 +1815,14 @@ or run without that action (ie: --no-{action})"
             unittest_branch = "%s-%s-%s" % (self.branch,
                                             platform_and_build_type,
                                             'unittest')
-            self.sendchange(downloadables=[installer_url, tests_url],
+
+            downloadables = [installer_url]
+            if test_packages_url:
+                downloadables.append(test_packages_url)
+            else:
+                downloadables.append(tests_url)
+
+            self.sendchange(downloadables=downloadables,
                             branch=unittest_branch,
                             sendchange_props=sendchange_props)
         else:
