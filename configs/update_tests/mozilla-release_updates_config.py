@@ -15,4 +15,4 @@ PLATFORM_CONFIG = {
 config = PLATFORM_CONFIG[platform_name()]
 config.update({
     'firefox_ui_branch': 'mozilla-beta'
-}
+})
