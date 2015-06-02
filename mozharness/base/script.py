@@ -509,32 +509,35 @@ class ScriptMixin(PlatformMixin):
         self.log("Changing directory to %s." % dir_name)
         os.chdir(dir_name)
 
+    def is_exe(self, fpath):
+        """
+        Determine if fpath is a file and if it is executable.
+        """
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
     def which(self, program):
         """
         OS independent implementation of Unix's which command
         Takes in a program name
         Returns path to executable or None
         """
-        def is_exe(fpath):
-            return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
         if self._is_windows() and not program.endswith(".exe"):
             program += ".exe"
         fpath, fname = os.path.split(program)
         if fpath:
-            if is_exe(program):
+            if self.is_exe(program):
                 return program
         else:
             # If the exe file is defined in the configs let's use that
             exe = self.query_exe(program)
-            if is_exe(exe):
+            if self.is_exe(exe):
                 return exe
 
             # If not defined, let's look for it in the $PATH
             env = self.query_env()
             for path in env["PATH"].split(os.pathsep):
                 exe_file = os.path.join(path, program)
-                if is_exe(exe_file):
+                if self.is_exe(exe_file):
                     return exe_file
         return None
 

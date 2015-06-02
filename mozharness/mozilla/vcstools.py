@@ -34,6 +34,8 @@ class VCSToolsScript(VCSScript):
                     self.download_file(
                         url=self.config[vcs_tool],
                         file_name=file_path,
+                        parent_dir=os.path.dirname(file_path),
+                        create_parent_dir=True,
                     )
                     self.chmod(file_path, 0755)
         else:
@@ -42,8 +44,7 @@ class VCSToolsScript(VCSScript):
                 if file_path is None:
                     file_path = self.query_exe(vcs_tool)
 
-                    if os.path.isfile(file_path) and \
-                       (os.stat(file_path).st_mode and stat.S_IRGRP):
+                    if not self.is_exe(file_path):
                         self.critical("%s is not executable." % file_path)
 
                     self.fatal("This machine is missing %s, if this is your "
