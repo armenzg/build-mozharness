@@ -4,7 +4,7 @@ PLATFORM_CONFIG = {
     'linux64': {
         'update_verify_config': 'mozBeta-firefox-linux64.cfg'
     },
-    'macosx64': {
+    'macosx': {
         'update_verify_config': 'mozBeta-firefox-mac64.cfg'
     },
     'win32': {
