@@ -241,14 +241,12 @@ class FirefoxUIUpdates(FirefoxUITests):
         dirs = self.query_abs_dirs()
         bin_dir = os.path.dirname(self.query_python_path())
         fx_ui_tests_bin = os.path.join(bin_dir, 'firefox-ui-update')
-        harness_log=os.path.join(dirs['abs_work_dir'], 'harness.log')
         gecko_log=os.path.join(dirs['abs_work_dir'], 'gecko.log')
 
         # Build the command
         cmd = [
             fx_ui_tests_bin,
             '--installer', installer_path,
-            '--log-unittest=%s' % harness_log,
             '--gecko-log=%s' % gecko_log,
         ]
 
@@ -261,14 +259,8 @@ class FirefoxUIUpdates(FirefoxUITests):
             cmd += ['--update-channel', update_channel]
 
         return_code = self.run_command(cmd, cwd=dirs['abs_work_dir'],
-                                       output_timeout=100,
+                                       output_timeout=300,
                                        env=env)
-
-        self.info('== Dumping output of harness ==')
-        contents = self.read_from_file(harness_log, verbose=False)
-        if contents:
-            self.info(contents)
-        self.info('== End of harness output ==')
 
         # Return more output if we fail
         if return_code != 0:
@@ -279,7 +271,7 @@ class FirefoxUIUpdates(FirefoxUITests):
             self.warning('== End of gecko output ==')
 
         if cleanup:
-            for filepath in (installer_path, gecko_log, harness_log):
+            for filepath in (installer_path, gecko_log):
                 if os.path.exists(filepath):
                     os.remove(filepath)
 
