@@ -5,7 +5,7 @@ PLATFORM_CONFIG = {
         'update_verify_config': 'mozRelease-firefox-linux64.cfg'
     },
     'macosx64': {
-        'update_verify_config': 'mozRelease-firefox-macosx.cfg'
+        'update_verify_config': 'mozRelease-firefox-mac64.cfg'
     },
     'win32': {
         'update_verify_config': 'mozRelease-firefox-win32.cfg'
