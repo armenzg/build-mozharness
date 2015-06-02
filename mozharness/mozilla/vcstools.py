@@ -9,9 +9,12 @@
 Author: Armen Zambrano G.
 """
 import os
+import stat
 
 from mozharness.base.script import PreScriptAction
 from mozharness.base.vcs.vcsbase import VCSScript
+
+VCS_TOOLS = ('hgtool.py', 'gittool.py')
 
 
 class VCSToolsScript(VCSScript):
@@ -25,11 +28,24 @@ class VCSToolsScript(VCSScript):
         if self.config.get('developer_mode'):
             # We put them on base_work_dir to prevent the clobber action
             # to delete them before we use them
-            for vcs_tool in ('hgtool.py', 'gittool.py'):
-                file_path = self.config['exes'][vcs_tool]
+            for vcs_tool in VCS_TOOLS:
+                file_path = self.query_exe(vcs_tool)
                 if not os.path.exists(file_path):
                     self.download_file(
                         url=self.config[vcs_tool],
                         file_name=file_path,
                     )
                     self.chmod(file_path, 0755)
+        else:
+            for vcs_tool in VCS_TOOLS:
+                file_path = self.which(vcs_tool)
+                if file_path is None:
+                    file_path = self.query_exe(vcs_tool)
+
+                    if os.path.isfile(file_path) and \
+                       (os.stat(file_path).st_mode and stat.S_IRGRP):
+                        self.critical("%s is not executable." % file_path)
+
+                    self.fatal("This machine is missing %s, if this is your "
+                               "local machine you can use --cfg "
+                               "developer_config.py" % vcs_tool)

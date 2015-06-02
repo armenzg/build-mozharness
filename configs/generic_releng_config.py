@@ -9,6 +9,8 @@ PYTHON_WIN32 = 'c:/mozilla-build/python27/python.exe'
 PLATFORM_CONFIG = {
     'linux64': {
         'exes': {
+            'gittool.py': '/usr/local/bin/gittool.py',
+            'hgtool.py': '/usr/local/bin/hgtool.py',
             'python': '/tools/buildbot/bin/python',
             'virtualenv': ['/tools/buildbot/bin/python', '/tools/misc-python/virtualenv.py'],
         },
@@ -18,16 +20,18 @@ PLATFORM_CONFIG = {
     },
     'macosx': {
         'exes': {
+            'gittool.py': '/usr/local/bin/gittool.py',
+            'hgtool.py': '/usr/local/bin/hgtool.py',
             'python': '/tools/buildbot/bin/python',
             'virtualenv': ['/tools/buildbot/bin/python', '/tools/misc-python/virtualenv.py'],
         },
     },
     'win32': {
         "exes": {
+            'gittool.py': [PYTHON_WIN32, 'c:/builds/hg-shared/build/tools/buildfarm/utils/gittool.py'],
+            'hgtool.py': [PYTHON_WIN32, 'c:/builds/hg-shared/build/tools/buildfarm/utils/hgtool.py'],
             # Otherwise, depending on the PATH we can pick python 2.6 up
             'python': PYTHON_WIN32,
-            'hgtool.py': [PYTHON_WIN32, 'c:/builds/hg-shared/build/tools/buildfarm/utils/hgtool.py'],
-            'gittool.py': [PYTHON_WIN32, 'c:/builds/hg-shared/build/tools/buildfarm/utils/gittool.py'],
             'virtualenv': [PYTHON_WIN32, 'c:/mozilla-build/buildbotve/virtualenv.py'],
         }
     }

@@ -526,8 +526,8 @@ class ScriptMixin(PlatformMixin):
                 return program
         else:
             # If the exe file is defined in the configs let's use that
-            exe = self.config.get('exes', {}).get(program)
-            if exe:
+            exe = self.query_exe(program)
+            if is_exe(exe):
                 return exe
 
             # If not defined, let's look for it in the $PATH
