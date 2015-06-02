@@ -16,7 +16,12 @@ PLATFORM_CONFIG = {
             'DISPLAY': ':2',
         }
     },
-    'macosx64': {},
+    'macosx': {
+        'exes': {
+            'python': '/tools/buildbot/bin/python',
+            'virtualenv': ['/tools/buildbot/bin/python', '/tools/misc-python/virtualenv.py'],
+        },
+    },
     'win32': {
         "exes": {
             # Otherwise, depending on the PATH we can pick python 2.6 up
