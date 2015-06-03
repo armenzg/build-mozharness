@@ -1051,6 +1051,7 @@ def PostScriptAction(action=None):
 class BaseScript(ScriptMixin, LogMixin, object):
     def __init__(self, config_options=None, ConfigClass=BaseConfig,
                  default_log_level="info", **kwargs):
+        self._return_code = 0
         super(BaseScript, self).__init__()
 
         # Collect decorated methods. We simply iterate over the attributes of
@@ -1085,7 +1086,6 @@ class BaseScript(ScriptMixin, LogMixin, object):
             if hasattr(item, '_post_run_listener'):
                 self._listeners['post_run'].append(k)
 
-        self.return_code = 0
         self.log_obj = None
         self.abs_dirs = None
         if config_options is None:
@@ -1336,7 +1336,10 @@ class BaseScript(ScriptMixin, LogMixin, object):
 
     def run_and_exit(self):
         """Runs the script and exits the current interpreter."""
-        sys.exit(self.run())
+        rc = self.run()
+        if rc != 0:
+            self.warning("returning nonzero exit status %d" % rc)
+        sys.exit(rc)
 
     def clobber(self):
         """
@@ -1536,6 +1539,15 @@ class BaseScript(ScriptMixin, LogMixin, object):
                 buf = fh.read(bs)
         return hasher.hexdigest()
 
+    @property
+    def return_code(self):
+        return self._return_code
+
+    @return_code.setter
+    def return_code(self, code):
+        old_return_code, self._return_code = self._return_code, code
+        if old_return_code != code:
+            self.warning("setting return code to %d" % code)
 
 # __main__ {{{1
 if __name__ == '__main__':
